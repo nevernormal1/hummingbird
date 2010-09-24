@@ -58,6 +58,6 @@ db.open(function(p_db) {
     .exec('spec/unit/hummingbird_spec.js')
     .exec('spec/unit/view_spec.js')
     .exec('spec/unit/metric_spec.js')
-    .run({ reporter: JSpec.reporters.Terminal, fixturePath: 'spec/fixtures', failuresOnly: true })
+    .run({ reporter: JSpec.reporters.Terminal, failuresOnly: false })
     .report()
 });

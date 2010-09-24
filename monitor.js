@@ -1,25 +1,26 @@
 require.paths.unshift(__dirname + '/lib');
 require.paths.unshift(__dirname);
 require.paths.unshift(__dirname + '/deps/express/lib')
+require.paths.unshift(__dirname + '/deps/express/support')
 
 var sys = require('sys'),
   fs = require('fs'),
   mongo = require('deps/node-mongodb-native/lib/mongodb'),
   svc = require('service_json'),
-  weekly = require('weekly');
-
-require('express');
-require('express/plugins');
+  weekly = require('weekly'),
+  express = require('express'),
+  app = express.createServer();
 
 db = new mongo.Db('hummingbird', new mongo.Server('localhost', 27017, {}), {});
 
 db.open(function(p_db) {
-  configure(function(){
-    set('root', __dirname);
-    set('db', db);
-    use(Static);
-    use(Cookie);
-    use(Logger);
+  app.configure(function(){
+    app.set('root', __dirname);
+    app.set('db', db);
+    app.use(express.logger());
+    app.use(express.staticProvider());
+    app.use(express.bodyDecoder());
+    app.use(express.cookieDecoder());
 
     try {
       var configJSON = fs.readFileSync(__dirname + "/config/app.json");
@@ -31,68 +32,72 @@ db.open(function(p_db) {
     sys.puts(configJSON);
     var config = JSON.parse(configJSON.toString());
 
-    this.server.port = config.monitor_port;
-
     for(var i in config) {
-      set(i, config[i]);
+      app.set(i, config[i]);
     }
 
   });
 
-  get('/', function(){
-    authenticate(this);
-    this.render('index.html.ejs');
-  });
-
-  get('/weekly', function() {
-    authenticate(this);
-    this.render('weekly.html.ejs');
-  });
-
-  get('/login', function() {
-    this.render('login.html.ejs');
-  });
-
-  post('/login', function() {
-    if(this.params.post.password == set('password')) {
-      this.cookie('not_secret', this.params.post.password);
-
-      sys.log("Auth succeeded for " + this.params.post.username);
-      this.redirect('/');
-    } else {
-      sys.log("Auth failed for " + this.params.post.username);
-      this.redirect('/login');
-    }
-  });
-
-  get('/sale_list', function() {
-    authenticate(this);
-    var self = this;
-
-    if(set('sales_uri')) {
-      svc.fetchJSON(set('sales_uri'), function(data) {
-        self.contentType('json');
-        self.respond(200, data);
-      });
-    } else {
-      self.respond(500, "No sales uri");
-    }
-  });
-
-  get('/week.json', function() {
-    authenticate(this);
-    var self = this;
-    weekly.findByDay(Express.settings['db'], function(data) {
-      self.contentType('json');
-      self.respond(200, data);
+  app.get('/', function(req, res){
+    //authenticate(req, res);
+    res.render('index.html.ejs', {
+      locals: {
+        name: app.set('name')
+      }
     });
   });
 
-  run();
+  app.get('/weekly', function(req, res) {
+    //authenticate(req, res);
+    res.render('weekly.html.ejs');
+  });
+
+  app.get('/login', function(req, res) {
+    res.render('login.ejs', {
+      locals: {
+        name: app.set('name')
+      }
+    });
+  });
+
+  app.post('/login', function(req, res) {
+    if(req.param('password') == app.set('password')) {
+      //req.cookies('not_secret', req.param('password'));
+
+      sys.log("Auth succeeded for " + req.param('username'));
+      res.redirect('/');
+    } else {
+      sys.log("Auth failed for " + req.param('username'));
+      res.redirect('/login');
+    }
+  });
+
+  app.get('/sale_list', function(req, res) {
+    //authenticate(req, res);
+
+    if(app.set('sales_uri')) {
+      svc.fetchJSON(app.set('sales_uri'), function(data) {
+        res.contentType('json');
+        res.send(data, 200);
+      });
+    } else {
+      res.send("No sales uri", 500);
+    }
+  });
+
+  app.get('/week.json', function(req, res) {
+    //authenticate(req, res);
+    weekly.findByDay(Express.settings['db'], function(data) {
+      res.contentType('json');
+      res.send(data, 200);
+    });
+  });
+
+  app.listen(app.set("monitor_port"));
 });
 
-var authenticate = function(req) {
-  if(set('password') != req.cookies['not_secret']) {
-    req.redirect('/login');
+var authenticate = function(req, res) {
+  if(app.set('password') != req.cookies['not_secret']) {
+    res.redirect('/login');
   }
 };
