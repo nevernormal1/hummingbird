@@ -71,10 +71,6 @@ Hummingbird.WebSocket.Dashboard.prototype.start = function() {
   totalDiv.find('canvas').get(0).width = $(window).width() - 160;
   var totalGraph = new Hummingbird.Graph(totalDiv, { ratePerSecond: 20, logDate: true });
 
-  var cartAdds = $("#cart_adds");;
-  cartAdds.find('canvas').get(0).width = $(window).width() - 160;
-  var cartAddsGraph = new Hummingbird.Graph(cartAdds, { ratePerSecond: 20 });
-
   var wsServer = this.webSocketURI();
   var ws = new WebSocket(wsServer);
 
@@ -93,11 +89,6 @@ Hummingbird.WebSocket.Dashboard.prototype.start = function() {
       });
     } else if(typeof(data.total) != "undefined") {
       totalGraph.drawLogPath(data.total);
-      if(data.cartAdds) {
-        cartAddsGraph.drawLogPath(data.cartAdds);
-      } else {
-        cartAddsGraph.drawLogPath(0.0);
-      }
     }
   }
 
