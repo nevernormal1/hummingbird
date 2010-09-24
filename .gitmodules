@@ -18,4 +18,4 @@
 	url = http://github.com/tmpvar/node-microseconds.git
 [submodule "deps/node-websocket-server"]
 	path = deps/node-websocket-server
-	url = http://github.com/mnutt/node-websocket-server.git
+	url = http://github.com/miksago/node-websocket-server.git
